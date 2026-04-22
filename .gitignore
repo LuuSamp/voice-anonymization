@@ -1,3 +1,12 @@
+pdf-material/
+data/
+datasets/
+checkpoints/
+checkpoints/*
+pdf-material/*
+data/*
+datasets/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

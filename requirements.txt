@@ -1,0 +1,7 @@
+# Voice anonymization pipeline (voice_blurring, notebooks, data prep, source_separation)
+librosa>=0.10,<0.12
+numpy>=1.23
+soundfile>=0.12
+torch>=2.0
+jupyter>=1.0
+ipykernel>=6
