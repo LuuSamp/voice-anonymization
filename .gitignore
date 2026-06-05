@@ -6,6 +6,14 @@ checkpoints/*
 pdf-material/*
 data/*
 datasets/*
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.wav.gz
+*.mp3.gz
+*.m4a.gz
+*.flac.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

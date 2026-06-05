@@ -82,8 +82,10 @@ Output:
 
 ## References
 
-- Voice anonymization reference listed in `pdf-material/fonts.txt`:
+- Voice anonymization reference listed in:
   - [https://markcartwright.com/files/cohen-hadria2019voiceanonymization.pdf](https://markcartwright.com/files/cohen-hadria2019voiceanonymization.pdf)
+- Source separation architecture attribution:
+  - A. Jansson, E. J. Humphrey, N. Montecchio, R. M. Bittner, A. Kumar, and T. Weyde, "Singing voice separation with deep U-Net convolutional networks" [(https://archives.ismir.net/ismir2017/paper/000171.pdf](https://archives.ismir.net/ismir2017/paper/000171.pdf))
 
 ## Datasets used
 
