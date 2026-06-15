@@ -9,8 +9,8 @@ import numpy as np
 import torch
 import librosa
 
-from source_separation.stft import STFTConfig, magnitude_to_waveform
-from source_separation.unet import VoiceSeparationUNet
+from src.source_separation.stft import STFTConfig, magnitude_to_waveform
+from src.source_separation.unet import VoiceSeparationUNet
 
 
 def resolve_device(device: str = "auto") -> torch.device:

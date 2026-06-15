@@ -15,8 +15,8 @@ _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from anonymization_pipeline import anonymize_audio
-from source_separation import load_unet_checkpoint
+from src.pipeline import anonymize_audio
+from src.source_separation import load_unet_checkpoint
 
 
 def main() -> None:

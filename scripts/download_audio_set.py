@@ -10,6 +10,7 @@ SPEECH_MID = "/m/09x0r"
 DEFAULT_PER_LABEL = 5
 DEFAULT_WORKERS = 4
 DEFAULT_OUTPUT = Path("datasets/audioset/audio")
+DEFAULT_OUTPUT_BG = Path("datasets/audioset/audio_bg")
 CLASS_LABELS_PATH = Path("datasets/audioset/class_labels_indices.csv")
 SEGMENTS_PATH = Path("datasets/audioset/balanced_train_segments.csv")
 # Human-sound / speech branch in AudioSet ontology (indices 0–70, before Animal).
@@ -181,6 +182,77 @@ def select_segments_per_label(
     return dict(buckets)
 
 
+def select_background_segments_per_label(
+    segments: list[tuple[str, float, float, list[str]]],
+    mid_to_display: dict[str, str],
+    per_label: int,
+) -> dict[str, list[tuple[str, float, float, list[str]]]]:
+    """Bucket non-speech segments by their first ontology label."""
+    buckets: dict[str, list[tuple[str, float, float, list[str]]]] = defaultdict(list)
+    used: set[tuple[str, float, float]] = set()
+
+    for segment in segments:
+        labels = segment[3]
+        if SPEECH_MID in labels or not labels:
+            continue
+        key = segment_key(segment)
+        if key in used:
+            continue
+        folder = folder_name_for_mid(labels[0], mid_to_display)
+        if len(buckets[folder]) >= per_label:
+            continue
+        buckets[folder].append(segment)
+        used.add(key)
+
+    return dict(buckets)
+
+
+def _print_bucket_summary(buckets: dict[str, list], *, title: str) -> None:
+    print(title)
+    print(f"Label folders selected: {len(buckets)}")
+    for folder_name in sorted(buckets):
+        print(f"  {folder_name}: {len(buckets[folder_name])}")
+
+
+def _run_speech_download(args: argparse.Namespace, segments, speech_mids, mid_to_display) -> None:
+    speech_segments = [segment for segment in segments if SPEECH_MID in segment[3]]
+    buckets = select_segments_per_label(
+        speech_segments,
+        speech_mids,
+        mid_to_display,
+        args.per_label,
+        all_co_labels=args.all_co_labels,
+    )
+
+    speech_folder = folder_name_for_mid(SPEECH_MID, mid_to_display)
+    print(f"Speech segments in CSV: {len(speech_segments)}")
+    _print_bucket_summary(buckets, title="Speech foreground download plan:")
+    print(f"'{speech_folder}' clips: {len(buckets.get(speech_folder, []))}")
+    if len(buckets.get(speech_folder, [])) < args.per_label:
+        print(
+            "Note: balanced train has no segments with only the Speech label; "
+            "the Speech folder is filled from the shortest speech-only annotations."
+        )
+
+    if args.list_only:
+        return
+
+    download_segments(buckets, args.output, workers=args.workers)
+
+
+def _run_background_download(args: argparse.Namespace, segments, mid_to_display) -> None:
+    bg_segments = [segment for segment in segments if SPEECH_MID not in segment[3]]
+    buckets = select_background_segments_per_label(bg_segments, mid_to_display, args.per_label)
+    print(f"Non-speech segments in CSV: {len(bg_segments)}")
+    _print_bucket_summary(buckets, title="Background download plan:")
+
+    if args.list_only:
+        return
+
+    out = args.output_bg if args.mode == "both" else args.output
+    download_segments(buckets, out, workers=args.workers)
+
+
 def _fill_solo_speech_fallback(
     segments: list[tuple[str, float, float, list[str]]],
     buckets: dict[str, list[tuple[str, float, float, list[str]]]],
@@ -287,9 +359,16 @@ def download_segments(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Download AudioSet clips that contain Speech, grouped into one folder "
-            "per sub-label (default: speech-ontology labels only)."
+            "Download AudioSet clips for mix synthesis soundbanks. "
+            "Speech mode: clips containing Speech, grouped by sub-label. "
+            "Background mode: clips without Speech, grouped by first label."
         )
+    )
+    parser.add_argument(
+        "--mode",
+        choices=("speech", "background", "both"),
+        default="speech",
+        help="speech (default): speech fg clips; background: ambient bg; both: run each",
     )
     parser.add_argument(
         "-n",
@@ -303,7 +382,13 @@ def parse_args() -> argparse.Namespace:
         "--output",
         type=Path,
         default=DEFAULT_OUTPUT,
-        help=f"Output root directory (default: {DEFAULT_OUTPUT})",
+        help=f"Output root for speech mode (default: {DEFAULT_OUTPUT})",
+    )
+    parser.add_argument(
+        "--output-bg",
+        type=Path,
+        default=DEFAULT_OUTPUT_BG,
+        help=f"Output root for background mode when --mode both (default: {DEFAULT_OUTPUT_BG})",
     )
     parser.add_argument(
         "--class-labels",
@@ -342,35 +427,21 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.mode == "background" and args.output == DEFAULT_OUTPUT:
+        args.output = DEFAULT_OUTPUT_BG
+
     _, mid_to_display, speech_mids = load_class_labels(args.class_labels)
     segments = load_segments(args.segments)
 
-    speech_segments = [segment for segment in segments if SPEECH_MID in segment[3]]
-    buckets = select_segments_per_label(
-        speech_segments,
-        speech_mids,
-        mid_to_display,
-        args.per_label,
-        all_co_labels=args.all_co_labels,
-    )
+    if args.mode in ("speech", "both"):
+        if args.mode == "both":
+            print("=== Speech (foreground) ===")
+        _run_speech_download(args, segments, speech_mids, mid_to_display)
 
-    speech_folder = folder_name_for_mid(SPEECH_MID, mid_to_display)
-    print(f"Speech segments in CSV: {len(speech_segments)}")
-    print(f"Label folders selected: {len(buckets)}")
-    print(f"'{speech_folder}' clips: {len(buckets.get(speech_folder, []))}")
-    if len(buckets.get(speech_folder, [])) < args.per_label:
-        print(
-            "Note: balanced train has no segments with only the Speech label; "
-            "the Speech folder is filled from the shortest speech-only annotations."
-        )
-
-    for folder_name in sorted(buckets):
-        print(f"  {folder_name}: {len(buckets[folder_name])}")
-
-    if args.list_only:
-        return
-
-    download_segments(buckets, args.output, workers=args.workers)
+    if args.mode in ("background", "both"):
+        if args.mode == "both":
+            print("\n=== Background ===")
+        _run_background_download(args, segments, mid_to_display)
 
 
 if __name__ == "__main__":

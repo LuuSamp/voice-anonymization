@@ -18,7 +18,10 @@ This attribution is also discussed in the voice anonymization reference:
 - `stft.py`: STFT/ISTFT helpers and configuration.
 - `infer.py`: model loading and waveform inference utilities.
 - `losses.py`: loss functions used for training experiments.
+- `audioset_preprocess.py`: batch U-Net separation of downloaded AudioSet clips (evaluation/inspection only — not used for synthetic mix generation).
 
 ## Notes
 
 This code is research-oriented and may differ from the exact implementation details in the original paper.
+
+Synthetic training mixes are generated via `src/data_preparation/` and `scripts/build_soundbank.py` / `scripts/generate_soundscapes.py` (see root `README.md`).

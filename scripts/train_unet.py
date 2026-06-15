@@ -4,7 +4,7 @@ Train the voice-separation U-Net (Cohen–Hadria 2019 §2.1, §3.6).
 
 Expects a CSV manifest with columns ``mix_wav`` and ``voice_wav`` (paths to 16 kHz–compatible
 mono WAVs; files are resampled to 16 kHz). Does **not** depend on ``voice_blurring`` or
-``prepare_sonyc_vox_mixes`` — build the manifest however you like.
+``generate_soundscapes`` / ``build_unet_pairs`` — build the manifest however you like.
 
 Example::
 
@@ -27,9 +27,9 @@ _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from source_separation.losses import masked_l1_loss
-from source_separation.stft import STFTConfig, waveform_to_magnitude
-from source_separation.unet import VoiceSeparationUNet
+from src.source_separation.losses import masked_l1_loss
+from src.source_separation.stft import STFTConfig, waveform_to_magnitude
+from src.source_separation.unet import VoiceSeparationUNet
 
 
 def _load_mono_16k(path: Path, target_sr: int) -> np.ndarray:

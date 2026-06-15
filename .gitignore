@@ -1,11 +1,13 @@
 pdf-material/
-data/
 datasets/
 checkpoints/
 checkpoints/*
 pdf-material/*
-data/*
 datasets/*
+data/**
+!data/.gitignore
+!data/*/
+!data/*/.gitkeep
 *.wav
 *.mp3
 *.m4a

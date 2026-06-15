@@ -10,7 +10,7 @@ class VoiceSeparationUNet(nn.Module):
     """Predict a multiplicative soft mask on the input magnitude spectrogram.
 
     Input shape: ``(N, 1, n_freq_bins, n_frames)`` with ``n_freq_bins=512``, ``n_frames=128``
-    (see :class:`source_separation.stft.STFTConfig`).
+    (see :class:`src.source_separation.stft.STFTConfig`).
 
     Output: mask in ``(0, 1)`` with same spatial size as input (sigmoid).
     """

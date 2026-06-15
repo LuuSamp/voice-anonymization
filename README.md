@@ -14,12 +14,19 @@ It is organized for iterative experimentation rather than production-style packa
 
 ```text
 .
-|-- anonymization_pipeline/   # Core anonymization pipeline components
-|-- notebooks/                # Analysis and experiment inspection
-|-- scripts/                  # Data prep and training entrypoints
-|-- source_separation/        # Source separation experiments and related code
-|-- voice_blurring/           # Voice blurring methods and prototypes
-`-- requirements.txt          # Minimal Python dependencies
+|-- src/
+|   |-- data_preparation/   # Scaper soundbank + mix generation
+|   |-- source_separation/  # U-Net separation
+|   |-- voice_blurring/     # MFCC / low-pass blurring
+|   `-- pipeline/           # End-to-end orchestrator
+|-- data/
+|   |-- raw/                # Raw downloaded audio
+|   |-- synthetic/          # Scaper-generated mixes
+|   `-- processed/          # U-Net pairs, stems, etc.
+|-- configs/                # Soundbank adapter configs
+|-- notebooks/              # Analysis and experiment inspection
+|-- scripts/                # Data prep and training entrypoints
+`-- requirements.txt        # Minimal Python dependencies
 ```
 
 ## Quick start
@@ -29,25 +36,67 @@ It is organized for iterative experimentation rather than production-style packa
   ```bash
    pip install -r requirements.txt
   ```
+3. Install system dependencies for Scaper (Linux):
+  ```bash
+   # FFmpeg (required) and libsox (for soxbindings)
+   sudo pacman -S ffmpeg sox   # Manjaro/Arch
+   ```
 
 ## Preparing data
 
-Use `scripts/prepare_sonyc_vox_mixes.py` to generate SONYC + VoxCeleb mixtures.
+Synthetic mixes are generated with [Scaper](https://github.com/justinsalamon/scaper) in three steps: build a soundbank, generate soundscapes at chosen SNR tiers, then build U-Net training pairs.
 
-- Default inputs:
-  - SONYC annotations: `datasets/sonyc-v1-dataset/annotations.csv`
-  - SONYC audio root: `datasets/sonyc-v1-dataset/`
-  - Vox root: `datasets/voxceleb1-audio-wav-files-for-india-celebrity/`
-  - Vox metadata: `datasets/voxceleb1-audio-wav-files-for-india-celebrity/vox1_meta.csv`
-- Output is written to the path passed with `--out-dir`, plus a manifest CSV.
+### 1. Build a soundbank
 
-Examples:
+Soundbanks have Scaper layout: `foreground/{label}/*.wav` and `background/{label}/*.wav`.
+
+Cohen–Hadria-style SONYC + VoxCeleb (config file):
 
 ```bash
-python scripts/prepare_sonyc_vox_mixes.py --mode train --out-dir data/mixes_train
-python scripts/prepare_sonyc_vox_mixes.py --mode eval --out-dir data/mixes_eval --eval-snr high
-python scripts/prepare_sonyc_vox_mixes.py --mode eval --out-dir data/mixes_eval --use-training-vox
+python scripts/build_soundbank.py \
+  --out datasets/soundbanks/cohen_hadria \
+  --config configs/cohen_hadria_soundbank.json
 ```
+
+Single adapter example:
+
+```bash
+python scripts/build_soundbank.py --out datasets/soundbanks/audioset_fg \
+  --adapter audioset_raw --role foreground --label '*' \
+  --audio-root datasets/audioset/audio
+```
+
+Download AudioSet clips first (`scripts/download_audio_set.py`). Use `--mode speech` for foreground speech labels, `--mode background` for ambient backgrounds (`datasets/audioset/audio_bg/`), or `--mode both`.
+
+### 2. Generate soundscapes (SNR-controlled)
+
+Presets (`train`, `eval`, `overlay`) control event layout only. SNR is set with `--snr-min`/`--snr-max` or `--snr-tier low|medium|high`.
+
+```bash
+# Training mixes at high SNR
+python scripts/generate_soundscapes.py --preset train --snr-min 20 --snr-max 30 \
+  --soundbank datasets/soundbanks/cohen_hadria --out-dir data/synthetic/mixes_train
+
+# Eval at different SNR tiers
+python scripts/generate_soundscapes.py --preset eval --snr-tier low \
+  --soundbank datasets/soundbanks/cohen_hadria_eval --out-dir data/synthetic/mixes_eval_low
+
+python scripts/generate_soundscapes.py --preset eval --snr-min 3 --snr-max 8 \
+  --soundbank datasets/soundbanks/audioset_full --out-dir data/synthetic/mixes_eval_custom
+```
+
+SNR tiers: **low** 0–6 dB, **medium** 6–15 dB, **high** 15–30 dB.
+
+### 3. Build U-Net pair manifest
+
+```bash
+python scripts/build_unet_pairs.py \
+  --train-manifest data/synthetic/mixes_train/manifest_train.csv \
+  --pairs-manifest-out data/processed/unet/train_pairs.csv \
+  --stems-dir data/processed/unet/voice_stems
+```
+
+Voice stems are reconstructed from Scaper JAMS annotations (`jams_path` column in the manifest).
 
 ## Training U-Net
 
@@ -59,14 +108,14 @@ Train with `scripts/train_unet.py`. The script expects a CSV manifest with:
 Example training command:
 
 ```bash
-python scripts/train_unet.py --manifest data/pairs.csv --checkpoint-dir checkpoints/run1
+python scripts/train_unet.py --manifest data/processed/pairs.csv --checkpoint-dir checkpoints/run1
 ```
 
 Useful options:
 
 ```bash
 python scripts/train_unet.py \
-  --manifest data/pairs.csv \
+  --manifest data/processed/pairs.csv \
   --checkpoint-dir checkpoints/run1 \
   --epochs 20 \
   --batch-size 8 \

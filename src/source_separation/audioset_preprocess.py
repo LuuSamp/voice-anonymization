@@ -143,7 +143,7 @@ def _process_one_clip(
     config,
     device,
 ) -> ClipRecord:
-    from source_separation.infer import separate_voice
+    from src.source_separation.infer import separate_voice
 
     stem = mix_path.stem
     paths = _output_paths(processed_root, sub_label, stem)
@@ -268,7 +268,7 @@ def preprocess_all(
     index = _manifest_index(existing)
     records: list[ClipRecord] = list(existing)
 
-    from source_separation.infer import load_unet_checkpoint
+    from src.source_separation.infer import load_unet_checkpoint
 
     model = config = device = None
     stats = {"processed": 0, "skipped": 0, "failed": 0}

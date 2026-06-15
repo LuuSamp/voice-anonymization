@@ -2,6 +2,7 @@
 librosa>=0.10,<0.12
 numpy>=1.23
 soundfile>=0.12
+scaper>=1.6.5
 torch>=2.0
 jupyter>=1.0
 ipykernel>=6

@@ -1,0 +1,18 @@
+[
+  {
+    "adapter": "sonyc",
+    "role": "background",
+    "label": "urban",
+    "split": "test",
+    "dataset_root": "datasets/sonyc-v1-dataset",
+    "annotations_path": "datasets/sonyc-v1-dataset/annotations.csv"
+  },
+  {
+    "adapter": "voxceleb",
+    "role": "foreground",
+    "label": "speech",
+    "vox_set": "test",
+    "vox_root": "datasets/voxceleb1-audio-wav-files-for-india-celebrity",
+    "meta_path": "datasets/voxceleb1-audio-wav-files-for-india-celebrity/vox1_meta.csv"
+  }
+]

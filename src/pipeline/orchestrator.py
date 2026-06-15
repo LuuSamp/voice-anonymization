@@ -7,8 +7,8 @@ from typing import Any
 
 import numpy as np
 
-from source_separation import STFTConfig, VoiceSeparationUNet, separate_voice
-from voice_blurring import low_pass_blur, mfcc_inversion_blur
+from src.source_separation import STFTConfig, VoiceSeparationUNet, separate_voice
+from src.voice_blurring import low_pass_blur, mfcc_inversion_blur
 
 
 @dataclass
